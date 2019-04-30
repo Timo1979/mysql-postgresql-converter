@@ -30,3 +30,11 @@ More information
 ----------------
 
 You can learn more about the move which this powered at http://lanyrd.com/blog/2012/lanyrds-big-move/ and some technical details of it at http://www.aeracode.org/2012/11/13/one-change-not-enough/.
+
+Changes
+-------
+ - Адаптировал для Windows (убрал вызов утилиты wc)
+ - Адаптировал для python 3
+ - Убрал увеличение длины полей varchar в 2 раза
+ - Вырезаю ключевое слово COMMENT (POstgres его не понимает)
+

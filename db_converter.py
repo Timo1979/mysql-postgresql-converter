@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 
 """
 Fixes a MySQL dump made with the right format so it can be directly
@@ -22,7 +23,10 @@ def parse(input_filename, output_filename):
     if input_filename == "-":
         num_lines = -1
     else:
-        num_lines = int(subprocess.check_output(["wc", "-l", input_filename]).strip().split()[0])
+        
+        num_lines = -1
+        # в Windows нет утилиты wc
+        # num_lines = int(subprocess.check_output(["wc", "-l", input_filename]).strip().split()[0])
     tables = {}
     current_table = None
     creation_lines = []
@@ -46,7 +50,7 @@ def parse(input_filename, output_filename):
     if input_filename == "-":
         input_fh = sys.stdin
     else:
-        input_fh = open(input_filename)
+        input_fh = open(input_filename, encoding="utf-8")
 
 
     output.write("-- Converted by db_converter\n")
@@ -69,7 +73,7 @@ def parse(input_filename, output_filename):
             secs_left % 60,
         ))
         logging.flush()
-        line = line.decode("utf8").strip().replace(r"\\", "WUBWUBREALSLASHWUB").replace(r"\'", "''").replace("WUBWUBREALSLASHWUB", r"\\")
+        line = line.strip().replace(r"\\", "WUBWUBREALSLASHWUB").replace(r"\'", "''").replace("WUBWUBREALSLASHWUB", r"\\")
         # Ignore comment lines
         if line.startswith("--") or line.startswith("/*") or line.startswith("LOCK TABLES") or line.startswith("DROP TABLE") or line.startswith("UNLOCK TABLES") or not line:
             continue
@@ -83,17 +87,19 @@ def parse(input_filename, output_filename):
                 creation_lines = []
             # Inserting data into a table?
             elif line.startswith("INSERT INTO"):
-                output.write(line.encode("utf8").replace("'0000-00-00 00:00:00'", "NULL") + "\n")
+                output.write(line.replace("'0000-00-00 00:00:00'", "NULL") + "\n")
                 num_inserts += 1
             # ???
             else:
-                print "\n ! Unknown line in main body: %s" % line
+                print ("\n ! Unknown line in main body: %s" % line)
 
         # Inside-create-statement handling
         else:
             # Is it a column?
             if line.startswith('"'):
                 useless, name, definition = line.strip(",").split('"',2)
+                definition = definition.split(" COMMENT")[0]
+                # print ("definition " + definition + "\n")
                 try:
                     type, extra = definition.strip().split(" ", 1)
 
@@ -111,7 +117,7 @@ def parse(input_filename, output_filename):
                 final_type = None
                 set_sequence = None
                 if type.startswith("tinyint("):
-                    type = "int4"
+                    type = "smallint"
                     set_sequence = True
                     final_type = "boolean"
                 elif type.startswith("int("):
@@ -127,10 +133,11 @@ def parse(input_filename, output_filename):
                 elif type == "tinytext":
                     type = "text"
                 elif type.startswith("varchar("):
-                    size = int(type.split("(")[1].rstrip(")"))
-                    type = "varchar(%s)" % (size * 2)
+                    print(type.split("(")[1].split(')')[0])
+                    size = int(type.split("(")[1].split(')')[0])
+                    type = "varchar(%s)" % (size * 1)
                 elif type.startswith("smallint("):
-                    type = "int2"
+                    type = "smallint"
                     set_sequence = True
                 elif type == "datetime":
                     type = "timestamp with time zone"
@@ -187,7 +194,7 @@ def parse(input_filename, output_filename):
                 current_table = None
             # ???
             else:
-                print "\n ! Unknown line inside table creation: %s" % line
+                print ("\n ! Unknown line inside table creation: %s" % line)
 
 
     # Finish file
@@ -218,7 +225,7 @@ def parse(input_filename, output_filename):
     # Finish file
     output.write("\n")
     output.write("COMMIT;\n")
-    print ""
+    print ("")
 
 
 if __name__ == "__main__":
